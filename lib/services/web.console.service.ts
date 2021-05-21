@@ -1,7 +1,7 @@
 import {Inject, Injectable} from "@nestjs/common";
 import {ModuleRef} from "@nestjs/core";
 import express from "express";
-import {ConsoleOptions, ReadArgMap, ReadLineOptions, SessionObject} from "../console.types";
+import {ConsoleOptions, ReadArgMap, ReadArgOptions, ReadLineOptions, SessionObject} from "../console.types";
 import {ConsoleCommand} from "./processors/base/console.command";
 import {InvalidCommand} from "./processors/base/invalid.command";
 import {NotLoggedCommand} from "./processors/base/not-logged.command";
@@ -60,6 +60,11 @@ export class WebConsoleService {
     createNotLoggedCommand(rawCommand: string, command: string) {
         const cmd = new NotLoggedCommand();
         return {cmd, arg: command};
+    }
+
+    log(session: SessionObject, text: string) {
+        if (session.cancel) return;
+        session.logs += '<div>' + text + '</div>';
     }
 
     toTable(entities: any[] | any, noColumns?: boolean) {
@@ -121,8 +126,25 @@ export class WebConsoleService {
         return parsedArgs;
     }
 
-    async readArgs(session: SessionObject, arg: string, mapList: ReadArgMap[]): Promise<string[]> {
-        return await this._readArgs(session, mapList, this.parseArgs(arg));
+    async readArgs(session: SessionObject, arg: string, mapList: ReadArgMap[], parameters?: ReadArgOptions): Promise<string[]> {
+        const {result, flatResult} = await this._readArgs(session, mapList, this.parseArgs(arg));
+        if (parameters) {
+            if (parameters.confirm) {
+                this.log(session, parameters.confirm['title'] || 'Executing command with parameters:');
+                if (!parameters.confirm['skipTable']) {
+                    this.log(session, this.toTable(flatResult.reduce((o, v, i) => {
+                            o[v.label.endsWith(':') ? v.label.slice(-1) : v.label] = v.text;
+                            return o;
+                        }, {})),
+                    );
+                }
+
+                if ((await this.readLine(session, 'Confirm? [Y/N]')).toLowerCase() != 'y') {
+                    throw new Error('Operation canceled')
+                }
+            }
+        }
+        return result;
     }
 
     getSession(req: express.Request, res: express.Response) {
@@ -148,11 +170,11 @@ export class WebConsoleService {
         return session;
     }
 
-    private async _readArgs(session: SessionObject, mapList: ReadArgMap[], parsedArgs: string[]): Promise<string[]> {
-        let result = [];
+    private async _readArgs(session: SessionObject, mapList: ReadArgMap[], parsedArgs: string[]): Promise<{result: string[], flatResult: {label: string, text: string, input: string}[]}> {
+        let result = [], flatResult = [];
         for (let i = 0; i < mapList.length; i++) {
             let map = mapList[i];
-            let input;
+            let label = map.title, text, input;
             if (parsedArgs.length) {
                 const desiredInput = parsedArgs.shift();
                 if (map.opts?.select) {
@@ -172,21 +194,28 @@ export class WebConsoleService {
             }
             while (true) {
                 if (input == null)
-                    input = await this.readLine(session, map.title + (map.default ? ` [${map.default}]` : ''), map.opts);
+                    input = await this.readLine(session, map.title + (map.default ? ` [${map.default}]` : '') + ':', map.opts);
                 if (!input && map.default)
                     input = map.default
-                if (!map.expect || (typeof map.expect == 'string' ? expectRegex[map.expect] : map.expect).test(input))
+                if (!map.expect || (typeof map.expect == 'string' ? expectRegex[map.expect] : map.expect).test(input)) {
+                    if (map.opts?.select?.length && Array.isArray(map.opts.select[0]))
+                        text = (map.opts.select as string[][]).find(x => x[0] == input)[1];
+                    else
+                        text = input;
                     break;
+                }
                 session.logs += '<div>' + (`Invalid parameter "${input}". ${map.expectDesc || ''}`) + '</div>';
                 input = null;
             }
-            result.push(input)
+            flatResult.push({input, label, text})
+            result.push(input);
             if (map.then) {
                 const innerResult = await this._readArgs(session, map.then(input), parsedArgs);
-                result.push(...innerResult);
+                result.push(innerResult.result);
+                flatResult.push(...innerResult.flatResult);
             }
         }
-        return result;
+        return {result, flatResult};
     }
 
     private clearExpired() {
@@ -238,7 +267,7 @@ export interface CommandProcessParameters {
 
     log(text: string): any,
 
-    readArgs(mapList: ReadArgMap[]): Promise<string[]>,
+    readArgs(mapList: ReadArgMap[], parameters?: ReadArgOptions): Promise<string[]>,
 
     readLine(title?: string, opts?: ReadLineOptions): Promise<string>,
 

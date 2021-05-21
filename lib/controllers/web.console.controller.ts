@@ -1,7 +1,7 @@
 import {Body, Controller, Get, Inject, Ip, Param, Post, Req, Res} from '@nestjs/common';
 import ejs from 'ejs';
 import express, {Request, Response} from 'express';
-import {ConsoleOptions, ReadArgMap, ReadLineOptions} from "../console.types";
+import {ConsoleOptions, ReadArgMap, ReadArgOptions, ReadLineOptions} from "../console.types";
 import {WebConsoleService} from "../services/web.console.service";
 
 const boot = new Date();
@@ -118,7 +118,7 @@ export function WebConsoleControllerFactory(endpoint): any {
             align-items: center;
             position: relative;
             min-width: 15ch;
-            max-width: 30ch;
+            max-width: unset;
             border: 0;
             border-radius: 0.25em;
             cursor: pointer;
@@ -450,12 +450,9 @@ export function WebConsoleControllerFactory(endpoint): any {
                                 req,
                                 res,
                                 ip,
-                                log: text => {
-                                    if (session.cancel) return;
-                                    session.logs += '<div>' + text + '</div>';
-                                },
                                 rawCommand: cmd,
-                                readArgs: (mapList: ReadArgMap[]): Promise<string[]> => this.webConsoleService.readArgs(session, arg, mapList),
+                                log: text => this.webConsoleService.log(session, text),
+                                readArgs: (mapList: ReadArgMap[], parameters?: ReadArgOptions): Promise<string[]> => this.webConsoleService.readArgs(session, arg, mapList, parameters),
                                 readLine: (title?: string, opts?: ReadLineOptions): Promise<string> => this.webConsoleService.readLine(session, title || '', opts),
                                 parseArgs: (funcArg?: string) => this.webConsoleService.parseArgs(funcArg || arg),
                                 toTable: this.webConsoleService.toTable

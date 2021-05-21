@@ -26,6 +26,13 @@ export interface ReadArgMap {
     default?: string
 }
 
+export interface ReadArgOptions {
+    confirm: boolean | {
+        skipTable?: boolean
+        title?: string
+    }
+}
+
 export interface ConsoleOptions {
     name?: string,
     masterPin: string,
