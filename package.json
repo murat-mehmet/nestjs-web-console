@@ -1,0 +1,43 @@
+{
+  "name": "nestjs-web-console",
+  "version": "0.1.10",
+  "description": "Web console for NestJs",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "mocha --reporter spec",
+    "prepublish": "npm run build"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/murat-mehmet/nestjs-web-console.git"
+  },
+  "keywords": [
+    "mobx",
+    "observable",
+    "promise"
+  ],
+  "author": "murat-mehmet",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/murat-mehmet/nestjs-web-console/issues"
+  },
+  "homepage": "https://github.com/murat-mehmet/nestjs-web-console#readme",
+  "devDependencies": {
+    "@nestjs/common": "^7.6.17",
+    "@nestjs/core": "^7.6.17",
+    "@types/express": "^4.17.11",
+    "@types/lodash": "^4.14.170",
+    "@types/node": "^15.3.1",
+    "chai": "^4.2.0",
+    "express": "^4.17.1",
+    "mocha": "^7.0.0",
+    "rxjs": "^7.0.1",
+    "typescript": "^3.9.7"
+  },
+  "dependencies": {
+    "ejs": "^3.1.6",
+    "lodash": "^4.17.21"
+  }
+}
