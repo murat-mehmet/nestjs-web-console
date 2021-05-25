@@ -22,7 +22,7 @@ export interface ReadArgMap {
     expect?: RegExp | 'email'
     expectDesc?: string
     opts?: ReadLineOptions
-    then?: (input) => ReadArgMap[]
+    then?: (input) => ReadArgMap[] | Promise<ReadArgMap[]>
     default?: string
 }
 

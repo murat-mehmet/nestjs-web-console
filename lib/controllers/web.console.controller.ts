@@ -431,7 +431,13 @@ export function WebConsoleControllerFactory(endpoint): any {
                 session.running = false;
             } else {
                 if (session.readLineCallback) {
-                    session.readLineCallback(command);
+                    (async () => {
+                        session.readLineCallback(command);
+                    })().catch(e => {
+                        if (session.cancel) return;
+                        session.logs += e + '<br/><br/>'
+                        session.running = false;
+                    })
                     session.readLineCallback = null;
                 } else {
                     session.cancel = false;
@@ -451,7 +457,8 @@ export function WebConsoleControllerFactory(endpoint): any {
                                 res,
                                 ip,
                                 rawCommand: cmd,
-                                log: text => this.webConsoleService.log(session, text),
+                                log: (...text) => this.webConsoleService.log(session, this.webConsoleService.escapeHtml(text.map(x => typeof x == "object" ? JSON.stringify(x, null, 2) : x).join(' ')).replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;')),
+                                logRaw: (text) => this.webConsoleService.log(session, text),
                                 readArgs: (mapList: ReadArgMap[], parameters?: ReadArgOptions): Promise<string[]> => this.webConsoleService.readArgs(session, arg, mapList, parameters),
                                 readLine: (title?: string, opts?: ReadLineOptions): Promise<string> => this.webConsoleService.readLine(session, title || '', opts),
                                 parseArgs: (funcArg?: string) => this.webConsoleService.parseArgs(funcArg || arg),

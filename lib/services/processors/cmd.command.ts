@@ -12,7 +12,7 @@ export class CmdCommand extends ConsoleCommand {
         this.description = 'Creates a cmd process';
     }
 
-    async process({log, parseArgs, readLine, session}: CommandProcessParameters) {
+    async process({logRaw, parseArgs, readLine, session}: CommandProcessParameters) {
         await new Promise((res, rej) => {
             const process = spawn('cmd', parseArgs());
             session.onCancel = () => {
@@ -34,14 +34,14 @@ export class CmdCommand extends ConsoleCommand {
                 }
                 if (waitingInput) {
                     const [, ...captures] = out.match(/(.*<br\/>)?(.*)/m)
-                    _.dropRight(captures, 1).forEach(capture => capture && log(capture));
+                    _.dropRight(captures, 1).forEach(capture => capture && logRaw(capture));
                     readLine(_.last(captures) || '').then(input => {
                         lastInput = input
                         firstResponse = true;
                         process.stdin.write(input + '\r\n');
                     })
                 } else {
-                    out && log(out)
+                    out && logRaw(out)
                 }
             }
             process.stdout.on('data', handleOutput);

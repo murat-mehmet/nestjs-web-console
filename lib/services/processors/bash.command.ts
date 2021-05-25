@@ -17,7 +17,7 @@ export class BashCommand extends ConsoleCommand {
         return input ? (input + ' && ' + postCommand) : postCommand;
     }
 
-    async process({log, arg, session, parseArgs, readLine}: CommandProcessParameters) {
+    async process({logRaw, arg, session, parseArgs, readLine}: CommandProcessParameters) {
         await new Promise((res, rej) => {
             const process = spawn('sh', parseArgs());
             session.onCancel = () => {
@@ -31,13 +31,13 @@ export class BashCommand extends ConsoleCommand {
                         out = out.slice(0, -1);
                     out = escapeHtml(out).replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;');
                     const [, ...captures] = out.match(/(.*<br\/>)?(.*)/m)
-                    _.dropRight(captures, 1).forEach(capture => capture && log(capture));
+                    _.dropRight(captures, 1).forEach(capture => capture && logRaw(capture));
                     readLine(_.last(captures) || '').then(input => {
                         process.stdin.write(this.getInput(input));
                     })
                 } else {
                     out = escapeHtml(out).replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;');
-                    out && log(out)
+                    out && logRaw(out)
                 }
             }
             const handleError = chunk => {
@@ -45,9 +45,9 @@ export class BashCommand extends ConsoleCommand {
                 if (out.endsWith('\n'))
                     out = out.slice(0, -1);
                 out = escapeHtml(out).replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;');
-                out && log(out)
+                out && logRaw(out)
 
-                log('&nbsp;');
+                logRaw('&nbsp;');
                 if (!process.killed)
                     process.stdin.write(this.getInput(null));
             }

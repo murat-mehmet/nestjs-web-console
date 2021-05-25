@@ -170,6 +170,15 @@ export class WebConsoleService {
         return session;
     }
 
+    escapeHtml(unsafe) {
+        return unsafe
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
     private async _readArgs(session: SessionObject, mapList: ReadArgMap[], parsedArgs: string[]): Promise<{result: string[], flatResult: {label: string, text: string, input: string}[]}> {
         let result = [], flatResult = [];
         for (let i = 0; i < mapList.length; i++) {
@@ -210,7 +219,7 @@ export class WebConsoleService {
             flatResult.push({input, label, text})
             result.push(input);
             if (map.then) {
-                const innerResult = await this._readArgs(session, map.then(input), parsedArgs);
+                const innerResult = await this._readArgs(session, await map.then(input), parsedArgs);
                 result.push(innerResult.result);
                 flatResult.push(...innerResult.flatResult);
             }
@@ -255,6 +264,7 @@ export class WebConsoleService {
         }
         return text;
     }
+
 }
 
 export interface CommandProcessParameters {
@@ -265,7 +275,9 @@ export interface CommandProcessParameters {
     res: express.Response,
     ip: string,
 
-    log(text: string): any,
+    logRaw(text: string): any,
+
+    log(...text: any[]): any,
 
     readArgs(mapList: ReadArgMap[], parameters?: ReadArgOptions): Promise<string[]>,
 
