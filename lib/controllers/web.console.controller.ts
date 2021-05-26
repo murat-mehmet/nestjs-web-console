@@ -185,7 +185,7 @@ export function WebConsoleControllerFactory(endpoint): any {
             <form method="post" style="display: flex; flex: 1" class="commandFormInline">
                 <% if (model.readLineOpts.select) { %>
                     <div class="select">
-                        <select id="command" name="command" size="<%= model.readLineOpts.select.length %>" onchange="console.log('asd')"
+                        <select id="command" name="command" size="<%= Math.max(2,model.readLineOpts.select.length) %>"
                                 autofocus="autofocus">
                             <option value="[null]" id="empty">Select...</option>
                             <% model.readLineOpts.select.forEach(function(x, i) {
