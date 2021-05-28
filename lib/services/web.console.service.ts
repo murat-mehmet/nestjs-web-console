@@ -277,6 +277,8 @@ export interface CommandProcessParameters {
 
     logRaw(text: string): any,
 
+    logTable(entities: any[] | any, noColumns?: boolean): any,
+
     log(...text: any[]): any,
 
     readArgs(mapList: ReadArgMap[], parameters?: ReadArgOptions): Promise<string[]>,

@@ -459,6 +459,7 @@ export function WebConsoleControllerFactory(endpoint): any {
                                 rawCommand: cmd,
                                 log: (...text) => this.webConsoleService.log(session, this.webConsoleService.escapeHtml(text.map(x => typeof x == "object" ? JSON.stringify(x, null, 2) : x).join(' ')).replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;')),
                                 logRaw: (text) => this.webConsoleService.log(session, text),
+                                logTable: (entities,noColumns?) => this.webConsoleService.log(session, this.webConsoleService.toTable(entities, noColumns)),
                                 readArgs: (mapList: ReadArgMap[], parameters?: ReadArgOptions): Promise<string[]> => this.webConsoleService.readArgs(session, arg, mapList, parameters),
                                 readLine: (title?: string, opts?: ReadLineOptions): Promise<string> => this.webConsoleService.readLine(session, title || '', opts),
                                 parseArgs: (funcArg?: string) => this.webConsoleService.parseArgs(funcArg || arg),

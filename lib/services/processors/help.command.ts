@@ -11,12 +11,12 @@ export class HelpCommand extends ConsoleCommand {
         this.requiresAuth = false;
     }
 
-    async process({log, toTable}: CommandProcessParameters) {
+    async process({logTable}: CommandProcessParameters) {
         const entities = this.webConsoleService.allCommands.map(x => ({
             Command: x.command,
             Description: x.description
         }));
-        log(toTable(entities))
+        logTable(entities)
     }
 
 }
