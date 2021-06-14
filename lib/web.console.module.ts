@@ -1,8 +1,9 @@
-import {DynamicModule, Module} from '@nestjs/common';
+import {DynamicModule, HttpModule, Module} from '@nestjs/common';
 import _ from 'lodash';
 import {ConsoleModuleAsyncOptions, ConsoleModuleOptions, DEFAULT_OPTIONS} from "./console.types";
 import {WebConsoleControllerFactory} from "./controllers/web.console.controller";
 import {ALL_COMMANDS} from "./services/all.commands";
+import {RemoteConsoleService} from "./services/remote.console.service";
 import {WebConsoleService} from "./services/web.console.service";
 
 @Module({})
@@ -12,8 +13,9 @@ export class WebConsoleModule {
         ALL_COMMANDS.push(...commands);
         return {
             controllers: [WebConsoleControllerFactory(endpoint)],
-            imports: !imports ? [] : [
-                ...imports
+            imports: [
+                ...!imports ? [] : imports,
+                HttpModule
             ],
             exports: [
                 WebConsoleService,
@@ -22,6 +24,7 @@ export class WebConsoleModule {
             module: WebConsoleModule,
             providers: [
                 WebConsoleService,
+                RemoteConsoleService,
                 {
                     provide: 'CONFIG_ROOT_OPTIONS',
                     useFactory: async (
@@ -43,8 +46,9 @@ export class WebConsoleModule {
         ALL_COMMANDS.push(...commands);
         return {
             controllers: [WebConsoleControllerFactory(endpoint)],
-            imports: !imports ? [] : [
-                ...imports
+            imports: [
+                ...!imports ? [] : imports,
+                HttpModule
             ],
             exports: [
                 WebConsoleService,
@@ -53,6 +57,7 @@ export class WebConsoleModule {
             module: WebConsoleModule,
             providers: [
                 WebConsoleService,
+                RemoteConsoleService,
                 {
                     provide: 'CONFIG_ROOT_OPTIONS',
                     useValue: consoleOptions,

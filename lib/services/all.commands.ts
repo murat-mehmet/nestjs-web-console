@@ -1,5 +1,5 @@
 import {Type} from "@nestjs/common";
-import {BashCommand, ClearScreenCommand, CmdCommand, HelpCommand, LoginCommand, LogoutCommand} from "./processors";
+import {BashCommand, ClearScreenCommand, CmdCommand, HelpCommand, InviteCommand, JoinCommand, LoginCommand, LogoutCommand} from "./processors";
 import {ConsoleCommand} from "./processors/base/console.command";
 
 export const ALL_COMMANDS: Type<ConsoleCommand>[] = [
@@ -8,5 +8,7 @@ export const ALL_COMMANDS: Type<ConsoleCommand>[] = [
     LogoutCommand,
     ClearScreenCommand,
     BashCommand,
-    CmdCommand
+    CmdCommand,
+    InviteCommand,
+    JoinCommand,
 ];

@@ -10,6 +10,20 @@ export interface SessionObject {
     readLineOpts?: ReadLineOptions,
     cancel?: boolean;
     onCancel?: () => any;
+    onCancelSignal?: () => any;
+    joinedConnection?: {
+        //incoming
+        name: string,
+        version: string,
+        path: string,
+        result: string,
+        running: boolean,
+        readLine: boolean,
+        readLineOpts: ReadLineOptions,
+        onStream: () => any,
+        //outgoing
+        command: string,
+    };
 }
 
 export interface ReadLineOptions {

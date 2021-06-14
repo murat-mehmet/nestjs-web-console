@@ -15,6 +15,9 @@ export class CmdCommand extends ConsoleCommand {
     async process({logRaw, parseArgs, readLine, session}: CommandProcessParameters) {
         await new Promise((res, rej) => {
             const process = spawn('cmd', parseArgs());
+            session.onCancelSignal = () => {
+                process.kill("SIGINT");
+            }
             session.onCancel = () => {
                 process.kill();
             }

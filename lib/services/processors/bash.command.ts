@@ -20,6 +20,9 @@ export class BashCommand extends ConsoleCommand {
     async process({logRaw, arg, session, parseArgs, readLine}: CommandProcessParameters) {
         await new Promise((res, rej) => {
             const process = spawn('sh', parseArgs());
+            session.onCancelSignal = () => {
+                process.kill("SIGINT");
+            }
             session.onCancel = () => {
                 process.kill();
             }

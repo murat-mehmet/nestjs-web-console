@@ -1,7 +1,8 @@
-import {Body, Controller, Get, Inject, Ip, Param, Post, Req, Res} from '@nestjs/common';
+import {Body, Controller, Get, Inject, Ip, Param, Post, Query, Req, Res} from '@nestjs/common';
 import ejs from 'ejs';
 import express, {Request, Response} from 'express';
 import {ConsoleOptions, ReadArgMap, ReadArgOptions, ReadLineOptions} from "../console.types";
+import {RemoteConsoleService} from "../services/remote.console.service";
 import {WebConsoleService} from "../services/web.console.service";
 
 const boot = new Date();
@@ -171,7 +172,7 @@ export function WebConsoleControllerFactory(endpoint): any {
     </style>
     <script src="https://code.jquery.com/jquery-3.6.0.slim.min.js"></script>
 </head>
-<body onclick="document.getElementById('command')?.focus();">
+<body>
 <div id="output">
     <div>
         Web Console | <%= model.name %><br />
@@ -217,10 +218,14 @@ export function WebConsoleControllerFactory(endpoint): any {
     <form method="post" id="cancelForm">
         <input type="hidden" name="command" value="ctrl+c" />
     </form>
+    <form method="post" id="cancelShiftForm">
+        <input type="hidden" name="command" value="ctrl+shift+c" />
+    </form>
 </div>
 <div id="bottom-base">
     <% if (model.running) { %>
-        <div id="cancel">[ Cancel ]</div>
+        <div id="cancel">[ Terminate ]</div>
+        <div id="shiftCancel">[ Cancel Signal ]</div>
     <% } else { %>
         <div id="prev">[ Previous ]</div>
         <div id="next">[ Next ]</div>
@@ -268,10 +273,14 @@ export function WebConsoleControllerFactory(endpoint): any {
         e = e || window.event;
         const key = e.which || e.keyCode;
         const ctrl = e.ctrlKey ? e.ctrlKey : ((key === 17) ? true : false);
+        const shift = e.shiftKey ? e.shiftKey : ((key === 16) ? true : false);
+        const alt = e.altKey ? e.altKey : ((key === 18) ? true : false);
 
         <% if (model.running) { %>
 
-        if (key === 67 && ctrl) {
+        if (key === 67 && alt && shift) {
+            $('#cancelShiftForm').submit();
+        } else if (key === 67 && alt) {
             $('#cancelForm').submit();
         }
         <% } else { %>
@@ -347,6 +356,9 @@ export function WebConsoleControllerFactory(endpoint): any {
         $('#cancel').on('click', function () {
             $('#cancelForm').submit();
         });
+        $('#shiftCancel').on('click', function () {
+            $('#cancelShiftForm').submit();
+        });
     }
     <% } else { %>
 
@@ -369,12 +381,29 @@ export function WebConsoleControllerFactory(endpoint): any {
         document.activeElement?.blur();
         $('body').addClass('submitting submitting2');
     });
+    
+    var longpress = false;
+
+    $("body").on('click', function () {
+        if (!longpress)
+            document.getElementById('command')?.focus();
+    });
+
+    var startTime, endTime;
+    $("body").on('mousedown', function () {
+        startTime = new Date().getTime();
+    });
+
+    $("body").on('mouseup', function () {
+        endTime = new Date().getTime();
+        longpress = (endTime - startTime < 500) ? false : true;
+    });
 </script>
 </body>
 </html>
     `;
 
-        constructor(readonly webConsoleService: WebConsoleService) {}
+        constructor(readonly webConsoleService: WebConsoleService,readonly remoteConsoleService: RemoteConsoleService) {}
 
         @Get('substring/:start')
         async getSubstring(@Req() req: express.Request, @Res() res: express.Response, @Param('start') start: string) {
@@ -429,6 +458,20 @@ export function WebConsoleControllerFactory(endpoint): any {
                 }
                 session.logs += '<div>Operation canceled</div><br/>';
                 session.running = false;
+            } else if (command == 'ctrl+shift+c') {
+                if (session.onCancelSignal)
+                    session.onCancelSignal?.call(this);
+                else {
+                    session.cancel = true;
+                    session.onCancel?.call(this);
+                    if (session.readLineCallback) {
+                        session.readLineCallback(null);
+                        session.logs += '</div>';
+                        session.readLineCallback = null;
+                    }
+                    session.logs += '<div>Operation canceled</div><br/>';
+                    session.running = false;
+                }
             } else {
                 if (session.readLineCallback) {
                     (async () => {
@@ -491,6 +534,22 @@ export function WebConsoleControllerFactory(endpoint): any {
                     .replace(/(<.*?>)|\s+/g, (m, $1) => $1 ? $1 : ' ')
                     .trim())
             })
+        }
+
+        @Get('remote/invite')
+        invite(@Query() input: {name: string, v: string, p: string}){
+            return this.remoteConsoleService.inviteThisConsole(input.name, input.v, input.p);
+        }
+
+        @Post('remote/stream')
+        stream(@Body() input){
+            console.log('strea', input)
+            return this.remoteConsoleService.pumpStream(input);
+        }
+
+        @Post('remote/close')
+        close(@Body() input: {name: string}){
+            return this.remoteConsoleService.closeFromRemote(input.name);
         }
     }
 

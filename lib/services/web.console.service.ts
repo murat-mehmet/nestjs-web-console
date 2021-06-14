@@ -102,6 +102,7 @@ export class WebConsoleService {
             if (session.cancel) return rej('Operation canceled');
             session.logs += '<div class="row">' + title + '&nbsp;';
             session.readLineOpts = opts || {};
+            session.readLineOpts['title'] = title + ' ';
             session.readLineCallback = (input) => {
                 if (session.cancel) return rej('Operation canceled');
                 let displayInput;
@@ -118,11 +119,25 @@ export class WebConsoleService {
     }
 
     parseArgs(arg: string) {
-        let parsedArgs;
+        let parsedArgs = [];
         if (arg) {
-            parsedArgs = arg.match(/(?<=")\w[\w\s]*(?=")|((\\")|[^" ])+/g);
-        } else
-            parsedArgs = [];
+            let w = '', wqs = false;
+            for (let i = 0; i < arg.length; i++) {
+                if (arg[i] == '"' && (i == 0 || arg[i - 1] != '\\')) {
+                    if (wqs) {
+                        if (w) parsedArgs.push(w);
+                        w = '';
+                        wqs = false;
+                    } else wqs = true;
+                } else if (arg[i] == ' ' && !wqs) {
+                    if (w) parsedArgs.push(w);
+                    w = '';
+                } else if (arg[i] == '\\' && (i == 0 || arg[i - 1] != '\\')) {
+                    continue;
+                } else w += arg[i];
+            }
+            if (w) parsedArgs.push(w)
+        }
         return parsedArgs;
     }
 
@@ -256,7 +271,7 @@ export class WebConsoleService {
         return parsedCookies;
     };
 
-    private makeId = length => {
+    makeId = length => {
         let text = "";
         const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
         for (let i = 0; i < length; i++) {

@@ -23,7 +23,7 @@ export class LoginCommand extends ConsoleCommand {
             return;
         }
         const [input] = await readArgs([{
-            title: 'Enter master pin:',
+            title: 'Enter master pin',
             opts: {secure: true}
         }])
         if (this.consoleOptions.masterPin == input) {
