@@ -543,7 +543,6 @@ export function WebConsoleControllerFactory(endpoint): any {
 
         @Post('remote/stream')
         stream(@Body() input){
-            console.log('strea', input)
             return this.remoteConsoleService.pumpStream(input);
         }
 

@@ -1,6 +1,6 @@
 {
   "name": "nestjs-web-console",
-  "version": "0.1.26",
+  "version": "0.1.28",
   "description": "Web console for NestJs",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

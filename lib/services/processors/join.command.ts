@@ -9,8 +9,7 @@ export class JoinCommand extends ConsoleCommand {
     constructor(readonly remoteConsoleService: RemoteConsoleService) {
         super();
         this.command = 'join';
-        this.description = 'Joins a remote console.'
-        this.requiresAuth = false
+        this.description = 'Joins a remote console.';
     }
 
     async process({log, readArgs, session, readLine}: CommandProcessParameters) {
