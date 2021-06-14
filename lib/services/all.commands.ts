@@ -9,6 +9,5 @@ export const ALL_COMMANDS: Type<ConsoleCommand>[] = [
     ClearScreenCommand,
     BashCommand,
     CmdCommand,
-    InviteCommand,
     JoinCommand,
 ];
