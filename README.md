@@ -51,6 +51,15 @@ import {WebConsoleModule} from "nestjs-web-console";
 export class AppModule {}
 ```
 
+To use csv temp files run
+```sh
+npm install csv-express --save
+```
+and in main.ts file
+```javascript
+import 'csv-express';
+```
+
 ## Test 
 ```sh
 npm run test

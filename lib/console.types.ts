@@ -28,7 +28,8 @@ export interface SessionObject {
 
 export interface ReadLineOptions {
     secure?: boolean,
-    select?: string[] | string[][]
+    select?: string[] | string[][],
+    boolean?: boolean | {positive?: string, negative?: string, reverse?: boolean}
 }
 
 export interface ReadArgMap {

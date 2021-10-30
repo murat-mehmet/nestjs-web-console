@@ -30,30 +30,40 @@ export class JoinCommand extends ConsoleCommand {
         }
         const inv = this.remoteConsoleService.openInvitations[remoteName];
         if (!inv)
-        return log('Console session no more open.');
+            return log('Console session no more open.');
         log('Joined console session.\n');
         const currentLogs = session.logs;
         let isOnStreamRunning = false;
-        const onStream = async () => {
+        const onStream = () => {
             if (isOnStreamRunning) return;
             isOnStreamRunning = true;
             try {
-                session.logs = currentLogs + session.joinedConnection.result.replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;') + '<br/>';
+                session.logs = currentLogs + session.joinedConnection.result.replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;') ;
                 if (!session.joinedConnection.running) {
-                    session.joinedConnection.command = await readLine(`${session.joinedConnection.path}:/>`);
-                    session.joinedConnection.running = true;
-                    session.logs = currentLogs + session.joinedConnection.result.replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;') + '<br/>';
+                    session.logs += '<br/>';
+                    readLine(`${session.joinedConnection.path}:/>`)
+                        .then(input => {
+                            session.joinedConnection.command = input;
+                            session.logs = currentLogs + session.joinedConnection.result.replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;') ;
+                            isOnStreamRunning = false;
+                        })
                 } else if (session.joinedConnection.readLine) {
-                    session.joinedConnection.command = await readLine(session.joinedConnection.readLineOpts['title'], session.joinedConnection.readLineOpts);
-                    session.joinedConnection.running = true;
-                    session.logs = currentLogs + session.joinedConnection.result.replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;') + '<br/>';
+                    session.logs += '<br/>';
+                    readLine(session.joinedConnection.readLineOpts['title'], session.joinedConnection.readLineOpts)
+                        .then(input => {
+                            session.joinedConnection.command = input;
+                            session.logs = currentLogs + session.joinedConnection.result.replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;') ;
+                            isOnStreamRunning = false;
+                        })
+
                 }
+                else
+                    isOnStreamRunning = false;
 
             } catch (e) {
                 log(e.message);
                 session.onCancel()
             }
-            isOnStreamRunning = false;
         };
 
         session.joinedConnection = {

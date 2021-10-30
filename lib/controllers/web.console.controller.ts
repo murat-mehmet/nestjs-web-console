@@ -1,14 +1,17 @@
-import {Body, Controller, Get, Inject, Ip, Param, Post, Query, Req, Res} from '@nestjs/common';
+import {BadRequestException, Body, Controller, Get, Inject, Ip, Param, Post, Query, Req, Res, UseFilters} from '@nestjs/common';
 import ejs from 'ejs';
 import express, {Request, Response} from 'express';
 import {ConsoleOptions, ReadArgMap, ReadArgOptions, ReadLineOptions} from "../console.types";
+import {HttpExceptionFilter} from "../filters/http-exception.filter";
 import {RemoteConsoleService} from "../services/remote.console.service";
+import {TempFileService} from "../services/temp.file.service";
 import {WebConsoleService} from "../services/web.console.service";
 
 const boot = new Date();
 
 export function WebConsoleControllerFactory(endpoint): any {
     @Controller(endpoint || 'console')
+    @UseFilters(HttpExceptionFilter)
     class WebConsoleController {
         @Inject('CONFIG_ROOT_OPTIONS') consoleOptions: ConsoleOptions;
 
@@ -17,6 +20,7 @@ export function WebConsoleControllerFactory(endpoint): any {
 <head>
     <title>Web Console | <%= model.name %></title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
     <style type="text/css">
         * {
             margin: 0;
@@ -403,7 +407,8 @@ export function WebConsoleControllerFactory(endpoint): any {
 </html>
     `;
 
-        constructor(readonly webConsoleService: WebConsoleService,readonly remoteConsoleService: RemoteConsoleService) {}
+        constructor(readonly webConsoleService: WebConsoleService, readonly remoteConsoleService: RemoteConsoleService,
+                    readonly tempFileService: TempFileService) {}
 
         @Get('substring/:start')
         async getSubstring(@Req() req: express.Request, @Res() res: express.Response, @Param('start') start: string) {
@@ -502,11 +507,13 @@ export function WebConsoleControllerFactory(endpoint): any {
                                 rawCommand: cmd,
                                 log: (...text) => this.webConsoleService.log(session, this.webConsoleService.escapeHtml(text.map(x => typeof x == "object" ? JSON.stringify(x, null, 2) : x).join(' ')).replace(/\n/g, '<br/>').replace(/\r/g, '').replace(/\s\s/g, ' &nbsp;')),
                                 logRaw: (text) => this.webConsoleService.log(session, text),
-                                logTable: (entities,noColumns?) => this.webConsoleService.log(session, this.webConsoleService.toTable(entities, noColumns)),
+                                logTable: (entities, noColumns?) => this.webConsoleService.log(session, this.webConsoleService.toTable(entities, noColumns)),
                                 readArgs: (mapList: ReadArgMap[], parameters?: ReadArgOptions): Promise<string[]> => this.webConsoleService.readArgs(session, arg, mapList, parameters),
                                 readLine: (title?: string, opts?: ReadLineOptions): Promise<string> => this.webConsoleService.readLine(session, title || '', opts),
                                 parseArgs: (funcArg?: string) => this.webConsoleService.parseArgs(funcArg || arg),
-                                toTable: this.webConsoleService.toTable
+                                toTable: this.webConsoleService.toTable,
+                                loop: this.webConsoleService.loopFactory(session),
+                                longWork: this.webConsoleService.longWorkFactory(session),
                             });
                         }
                     })().catch(e => {
@@ -537,18 +544,33 @@ export function WebConsoleControllerFactory(endpoint): any {
         }
 
         @Get('remote/invite')
-        invite(@Query() input: {name: string, v: string, p: string}){
+        invite(@Query() input: {name: string, v: string, p: string}) {
             return this.remoteConsoleService.inviteThisConsole(input.name, input.v, input.p);
         }
 
         @Post('remote/stream')
-        stream(@Body() input){
+        stream(@Body() input) {
             return this.remoteConsoleService.pumpStream(input);
         }
 
         @Post('remote/close')
-        close(@Body() input: {name: string}){
+        close(@Body() input: {name: string}) {
             return this.remoteConsoleService.closeFromRemote(input.name);
+        }
+
+        @Get('file/:name')
+        downloadTemp(@Param('name') name: string, @Res() res: express.Response) {
+            const file = this.tempFileService.read(name);
+            switch (file.type) {
+                case 'csv':
+                    if (!res['csv']) throw new BadRequestException('Module csv-express not installed');
+                    res.charset = 'utf8';
+                    return res['csv'](file.content, true)
+                case 'html':
+                    res.setHeader('Content-Type', 'text/html');
+                    return res.send(file.content);
+            }
+            throw new BadRequestException(`Invalid file type: ${file.type}`)
         }
     }
 

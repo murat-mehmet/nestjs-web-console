@@ -1,10 +1,15 @@
 import {Inject, Injectable} from "@nestjs/common";
 import {ModuleRef} from "@nestjs/core";
 import express from "express";
+import moment from "moment";
+import momentDurationFormatSetup from 'moment-duration-format';
+import Eta from "node-eta";
 import {ConsoleOptions, ReadArgMap, ReadArgOptions, ReadLineOptions, SessionObject} from "../console.types";
 import {ConsoleCommand} from "./processors/base/console.command";
 import {InvalidCommand} from "./processors/base/invalid.command";
 import {NotLoggedCommand} from "./processors/base/not-logged.command";
+
+momentDurationFormatSetup(moment as any);
 
 @Injectable()
 export class WebConsoleService {
@@ -103,9 +108,19 @@ export class WebConsoleService {
             session.logs += '<div class="row">' + title + '&nbsp;';
             session.readLineOpts = opts || {};
             session.readLineOpts['title'] = title + ' ';
+            if (session.readLineOpts.boolean){
+                session.readLineOpts.select = [
+                    ['1', (typeof session.readLineOpts.boolean == 'boolean' || !session.readLineOpts.boolean.positive) ? 'Yes' : session.readLineOpts.boolean.positive],
+                    ['', (typeof session.readLineOpts.boolean == 'boolean' || !session.readLineOpts.boolean.negative) ? 'No' : session.readLineOpts.boolean.negative]
+                ]
+                if (typeof session.readLineOpts.boolean == 'object' && session.readLineOpts.boolean.reverse){
+                    session.readLineOpts.select.reverse();
+                }
+            }
             session.readLineCallback = (input) => {
                 if (session.cancel) return rej('Operation canceled');
                 let displayInput;
+
                 if (session.readLineOpts.secure)
                     displayInput = '*'.repeat(input.length);
                 else if (session.readLineOpts.select && Array.isArray(session.readLineOpts.select[0]))
@@ -139,6 +154,56 @@ export class WebConsoleService {
             if (w) parsedArgs.push(w)
         }
         return parsedArgs;
+    }
+
+    longWorkFactory = (session: SessionObject) => async (process: (progress: (current: number, max: number) => void) => Promise<any>) => {
+        let pgCurrent, pgMax, changed = false, lastPercent = -1;
+        let eta;
+        let progress = (current, max) => {
+            if (pgMax != max) {
+                eta = new Eta(max);
+                eta.start();
+            }
+
+            eta.iterate();
+            if (pgCurrent != current || pgMax != max) {
+                pgCurrent = current;
+                pgMax = max;
+                changed = true;
+            }
+        }
+        let timer = setInterval(() => {
+            if (changed) {
+                changed = false;
+                const percent = !pgMax ? 0 : Math.round(pgCurrent / pgMax * 100);
+                if (lastPercent == -1 || percent - lastPercent >= 10) {
+                    //get estimates
+                    if (pgCurrent < pgMax) {
+                        this.log(session, `${percent}% (${pgCurrent}/${pgMax}) ${lastPercent == -1 ? '' : 'ETA: ' + moment.duration(+eta.format('{{eta}}'), 'seconds').format('hh:mm:ss', {trim: false})}`)
+                        lastPercent = percent;
+                        while (lastPercent % 10)
+                            lastPercent--;
+                    }
+                }
+            }
+        }, 2000);
+        await process(progress)
+            .then(() => {
+                this.log(session, `${!pgMax ? 0 : Math.round(pgCurrent / pgMax * 100)}% (${pgCurrent}/${pgMax}) ✔️`)
+            })
+            .finally(() => {
+                clearInterval(timer);
+            });
+    }
+    loopFactory = (session: SessionObject) => async <T>(items: T[], process: (item: T, i: number) => Promise<any>) => {
+        const wrappedProcess = async (progress: (current: number, max: number) => void) => {
+            for (let i = 0; i < items.length; i++) {
+                if (session.cancel) return;
+                progress(i + 1, items.length);
+                await process(items[i], i);
+            }
+        }
+        return await this.longWorkFactory(session)(wrappedProcess);
     }
 
     async readArgs(session: SessionObject, arg: string, mapList: ReadArgMap[], parameters?: ReadArgOptions): Promise<string[]> {
@@ -194,6 +259,15 @@ export class WebConsoleService {
             .replace(/'/g, "&#039;");
     }
 
+    makeId = length => {
+        let text = "";
+        const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        for (let i = 0; i < length; i++) {
+            text += possible.charAt(Math.floor(Math.random() * possible.length));
+        }
+        return text;
+    }
+
     private async _readArgs(session: SessionObject, mapList: ReadArgMap[], parsedArgs: string[]): Promise<{result: string[], flatResult: {label: string, text: string, input: string}[]}> {
         let result = [], flatResult = [];
         for (let i = 0; i < mapList.length; i++) {
@@ -201,6 +275,15 @@ export class WebConsoleService {
             let label = map.title, text, input;
             if (parsedArgs.length) {
                 const desiredInput = parsedArgs.shift();
+                if (map.opts?.boolean){
+                    map.opts.select = [
+                        ['1', (typeof map.opts.boolean == 'boolean' || !map.opts.boolean.positive) ? 'Yes' : map.opts.boolean.positive],
+                        ['', (typeof map.opts.boolean == 'boolean' || !map.opts.boolean.negative) ? 'No' : map.opts.boolean.negative]
+                    ]
+                    if (typeof map.opts.boolean == 'object' && map.opts.boolean.reverse){
+                        map.opts.select.reverse();
+                    }
+                }
                 if (map.opts?.select) {
                     const isArray = Array.isArray(map.opts.select[0]);
                     if (isArray) {
@@ -271,15 +354,6 @@ export class WebConsoleService {
         return parsedCookies;
     };
 
-    makeId = length => {
-        let text = "";
-        const possible = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-        for (let i = 0; i < length; i++) {
-            text += possible.charAt(Math.floor(Math.random() * possible.length));
-        }
-        return text;
-    }
-
 }
 
 export interface CommandProcessParameters {
@@ -303,6 +377,10 @@ export interface CommandProcessParameters {
     parseArgs(arg?: string): string[],
 
     toTable(entities: any[] | any, noColumns?: boolean): string
+
+    longWork(process: (progress: (current: number, max: number) => void) => Promise<any>): Promise<void>
+
+    loop<T>(items: T[], process: (item: T, i: number) => Promise<any>): Promise<void>
 }
 
 const expectRegex = {

@@ -4,6 +4,7 @@ import {ConsoleModuleAsyncOptions, ConsoleModuleOptions, DEFAULT_OPTIONS} from "
 import {WebConsoleControllerFactory} from "./controllers/web.console.controller";
 import {ALL_COMMANDS} from "./services/all.commands";
 import {RemoteConsoleService} from "./services/remote.console.service";
+import {TempFileService} from "./services/temp.file.service";
 import {WebConsoleService} from "./services/web.console.service";
 
 @Module({})
@@ -19,19 +20,21 @@ export class WebConsoleModule {
             ],
             exports: [
                 WebConsoleService,
+                TempFileService,
                 ...ALL_COMMANDS,
             ],
             module: WebConsoleModule,
             providers: [
                 WebConsoleService,
                 RemoteConsoleService,
+                TempFileService,
                 {
                     provide: 'CONFIG_ROOT_OPTIONS',
                     useFactory: async (
                         ...args: any[]
                     ) => {
                         const options = await useFactory(...args);
-                        return _.merge(DEFAULT_OPTIONS, options);
+                        return _.merge(DEFAULT_OPTIONS, {...options, endpoint});
                     },
                     inject: !inject ? [] : [...inject]
                 },
@@ -52,15 +55,17 @@ export class WebConsoleModule {
             ],
             exports: [
                 WebConsoleService,
+                TempFileService,
                 ...ALL_COMMANDS
             ],
             module: WebConsoleModule,
             providers: [
                 WebConsoleService,
                 RemoteConsoleService,
+                TempFileService,
                 {
                     provide: 'CONFIG_ROOT_OPTIONS',
-                    useValue: consoleOptions,
+                    useValue: {...consoleOptions, endpoint},
                 },
                 ...ALL_COMMANDS,
             ]

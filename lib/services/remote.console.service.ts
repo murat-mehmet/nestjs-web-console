@@ -43,16 +43,25 @@ export class RemoteConsoleService {
         running: boolean,
         readLine: boolean,
         readLineOpts: ReadLineOptions
+        time
     }) {
         if (!input.name) throw new BadRequestException('name cannot be empty');
         const session = _(this.webConsoleService.session).values().find(x => x.joinedConnection?.name == input.name);
         if (!session)
             throw new BadRequestException('connection closed');
-        Object.assign(session.joinedConnection, input);
-        await session.joinedConnection.onStream?.call(this);
         if (!session.joinedConnection)
             throw new BadRequestException('Connection was closed by remote end');
-        const command = session.joinedConnection?.command;
+
+        //override running states if a command is about to be sent
+        if (session.joinedConnection.command != null){
+            if (!session.joinedConnection.running)
+                input.running = true;
+            else if (session.joinedConnection.readLine)
+                input.readLine = false;
+        }
+        Object.assign(session.joinedConnection, input);
+        session.joinedConnection.onStream.call(this);
+        const command = session.joinedConnection.command;
         session.joinedConnection.command = null;
         return {command};
     }
