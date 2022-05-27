@@ -1,6 +1,7 @@
 export * from './console.types'
 export * from './web.console.module'
 export * from './services/web.console.service'
+export * from './services/temp.file.service'
 export * from './services/processors'
 export * from './services/processors/base/console.command'
 export * from './services/processors/base/invalid.command'
