@@ -1,4 +1,4 @@
-import {DynamicModule, HttpModule, Module} from '@nestjs/common';
+import {DynamicModule, Module} from '@nestjs/common';
 import _ from 'lodash';
 import {ConsoleModuleAsyncOptions, ConsoleModuleOptions, DEFAULT_OPTIONS} from "./console.types";
 import {WebConsoleControllerFactory} from "./controllers/web.console.controller";
@@ -6,14 +6,14 @@ import {ALL_COMMANDS} from "./services/all.commands";
 import {RemoteConsoleService} from "./services/remote.console.service";
 import {TempFileService} from "./services/temp.file.service";
 import {WebConsoleService} from "./services/web.console.service";
-
+import {HttpModule} from '@nestjs/axios';
 @Module({})
 export class WebConsoleModule {
     static forRootAsync(options: ConsoleModuleAsyncOptions): DynamicModule {
         const {imports = [], commands = [], useFactory, inject, endpoint} = options;
         ALL_COMMANDS.push(...commands);
         return {
-            controllers: [WebConsoleControllerFactory(endpoint)],
+            controllers: [WebConsoleControllerFactory(endpoint || 'console')],
             imports: [
                 ...!imports ? [] : imports,
                 HttpModule
@@ -48,7 +48,7 @@ export class WebConsoleModule {
         const consoleOptions = _.merge(DEFAULT_OPTIONS, options.options);
         ALL_COMMANDS.push(...commands);
         return {
-            controllers: [WebConsoleControllerFactory(endpoint)],
+            controllers: [WebConsoleControllerFactory(endpoint || 'console')],
             imports: [
                 ...!imports ? [] : imports,
                 HttpModule

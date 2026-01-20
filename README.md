@@ -1,5 +1,3 @@
-# STILL IN DEVELOPMENT
-
 # Web Console for NestJS
 *Command from anywhere.*
 

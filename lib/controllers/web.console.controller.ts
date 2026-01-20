@@ -6,14 +6,16 @@ import {HttpExceptionFilter} from "../filters/http-exception.filter";
 import {RemoteConsoleService} from "../services/remote.console.service";
 import {TempFileService} from "../services/temp.file.service";
 import {WebConsoleService} from "../services/web.console.service";
+import {ApplicationConfig} from '@nestjs/core';
 
 const boot = new Date();
 
 export function WebConsoleControllerFactory(endpoint): any {
-    @Controller(endpoint || 'console')
+    @Controller(endpoint)
     @UseFilters(HttpExceptionFilter)
     class WebConsoleController {
         @Inject('CONFIG_ROOT_OPTIONS') consoleOptions: ConsoleOptions;
+        @Inject(ApplicationConfig) appConfig: ApplicationConfig;
 
         view = `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" lang="en">
@@ -316,10 +318,10 @@ export function WebConsoleControllerFactory(endpoint): any {
     <% if (model.running && !model.readLine) { %>
     let start = +'<%= model.result.length %>';
     setInterval(() => {
-        fetch('/console/substring/' + start).then(x => x.json())
+        fetch('<%= model.url %>/substring/' + start).then(x => x.json())
             .then(x => {
                 if (!x.running || x.readLine)
-                    window.location.href = '/console';
+                    window.location.href = '<%= model.url %>';
                 else if (x.result.length) {
                     $('#logs').append(x.result);
                     start += x.result.length;
@@ -428,6 +430,7 @@ export function WebConsoleControllerFactory(endpoint): any {
         @Get()
         async get(@Req() req: express.Request, @Res() res: express.Response) {
             const session = this.webConsoleService.getSession(req, res);
+            const globalPrefix = this.appConfig.getGlobalPrefix();
             return res.send(ejs.render(this.view, {
                 model: {
                     name: this.consoleOptions.name,
@@ -435,7 +438,8 @@ export function WebConsoleControllerFactory(endpoint): any {
                     running: session.running,
                     readLine: !!session.readLineCallback,
                     readLineOpts: session.readLineOpts,
-                    boot
+                    boot,
+                    url: `${globalPrefix || ''}/${endpoint}`
                 }
             })
                 .replace(/>[\r\n ]+</g, "><")
@@ -452,6 +456,7 @@ export function WebConsoleControllerFactory(endpoint): any {
             const cmds = escaped.split("|").filter(x => x)
                 .map(x => x.replace(/\r\n/g, '|'));
             const session = this.webConsoleService.getSession(req, res);
+            const globalPrefix = this.appConfig.getGlobalPrefix();
 
             if (command == 'ctrl+c') {
                 session.cancel = true;
@@ -534,7 +539,8 @@ export function WebConsoleControllerFactory(endpoint): any {
                         running: session.running,
                         readLine: !!session.readLineCallback,
                         readLineOpts: session.readLineOpts,
-                        boot
+                        boot,
+                        url: `${globalPrefix || ''}/${endpoint}`
                     }
                 })
                     .replace(/>[\r\n ]+</g, "><")

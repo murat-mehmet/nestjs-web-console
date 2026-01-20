@@ -1,9 +1,12 @@
 import {BadRequestException, Inject, Injectable} from "@nestjs/common";
 import {ConsoleOptions} from "../console.types";
+import { ApplicationConfig } from "@nestjs/core";
 
 @Injectable()
 export class TempFileService {
     @Inject('CONFIG_ROOT_OPTIONS') consoleOptions: ConsoleOptions;
+    @Inject(ApplicationConfig) appConfig: ApplicationConfig;
+    
     private files: TempFileModel[] = []
 
     write(file: FileModel) {
@@ -53,7 +56,8 @@ export class TempFileService {
     }
 
     getUrl(name: string){
-        return `/${this.consoleOptions['endpoint'] || 'console'}/file/${name}`;
+        const globalPrefix = this.appConfig.getGlobalPrefix();
+        return `${globalPrefix || ''}/${this.consoleOptions['endpoint'] || 'console'}/file/${name}`;
     }
 
     private deleteExpired(name, expiresAt) {

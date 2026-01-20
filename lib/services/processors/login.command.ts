@@ -29,13 +29,13 @@ export class LoginCommand extends ConsoleCommand {
         if (this.consoleOptions.masterPin == input) {
             session.isLogged = true;
             log('Login success');
-            guard.failed = 0;
         } else {
             log('Login failed');
             guard.failed++;
         }
         if (this.consoleOptions.guard.enabled && guard.failed == this.consoleOptions.guard.maxTries) {
             guard.cooldownUntil = Date.now() + this.consoleOptions.guard.cooldown;
+            guard.failed = 0;
             log('Login banned temporarily.');
         }
     }

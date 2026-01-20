@@ -83,7 +83,7 @@ export class WebConsoleService {
         else if (isArray && !entities.length)
             return 'No records';
         const columns = noColumns ? [0] : Object.keys(isArray ? entities[0] : entities);
-        let html = "<table border='1'>";
+        let html = "<div style='overflow-x: auto'><table border='1'>";
         //add header row
         if (!noColumns) {
             html += "<thead><tr>";
@@ -98,7 +98,7 @@ export class WebConsoleService {
                 html += "<td>" + (noColumns ? (isArray ? entities[i] : entities) : (isArray ? entities[i][columns[j]] : entities[columns[j]]))?.toString() + "</td>";
             html += "</tr>";
         }
-        html += "</table>";
+        html += "</table></div>";
         return html;
     }
 

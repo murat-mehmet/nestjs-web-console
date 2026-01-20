@@ -1,6 +1,7 @@
-import {HttpService, Injectable} from "@nestjs/common";
+import {Injectable} from "@nestjs/common";
 import {CommandProcessParameters, WebConsoleService} from "../web.console.service";
 import {ConsoleCommand} from "./base/console.command";
+import {HttpService} from '@nestjs/axios';
 
 @Injectable()
 export class InviteCommand extends ConsoleCommand {
