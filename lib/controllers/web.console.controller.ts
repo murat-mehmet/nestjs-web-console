@@ -7,10 +7,12 @@ import {RemoteConsoleService} from "../services/remote.console.service";
 import {TempFileService} from "../services/temp.file.service";
 import {WebConsoleService} from "../services/web.console.service";
 import {ApplicationConfig} from '@nestjs/core';
+import {ApiExcludeController} from '@nestjs/swagger'
 
 const boot = new Date();
 
 export function WebConsoleControllerFactory(endpoint): any {
+    @ApiExcludeController()
     @Controller(endpoint)
     @UseFilters(HttpExceptionFilter)
     class WebConsoleController {
